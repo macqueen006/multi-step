@@ -45,6 +45,9 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+type PersonalInfoData = z.infer<typeof personalInfoSchema>;
+type AddressData = z.infer<typeof addressSchema>;
+type PaymentData = z.infer<typeof paymentSchema>;
 
 const steps = [
   {
@@ -71,19 +74,35 @@ const Home = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formData, setFormData] = useState<Partial<FormData>>({});
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  // Create separate form instances for each step
+  const personalForm = useForm<PersonalInfoData>({
+    resolver: zodResolver(personalInfoSchema),
     mode: "onChange",
     defaultValues: {
       firstName: "",
       lastName: "",
       email: "",
       phone: "",
+    },
+  });
+
+  const addressForm = useForm<AddressData>({
+    resolver: zodResolver(addressSchema),
+    mode: "onChange",
+    defaultValues: {
       street: "",
       city: "",
       state: "",
       zipCode: "",
+    },
+  });
+
+  const paymentForm = useForm<PaymentData>({
+    resolver: zodResolver(paymentSchema),
+    mode: "onChange",
+    defaultValues: {
       cardNumber: "",
       expiryDate: "",
       cvv: "",
@@ -91,22 +110,28 @@ const Home = () => {
     },
   });
 
-  const {
-    handleSubmit,
-    trigger,
-    formState: { errors }
-  } = form;
+  const getCurrentForm = () => {
+    switch (currentStep) {
+      case 0:
+        return personalForm;
+      case 1:
+        return addressForm;
+      case 2:
+        return paymentForm;
+      default:
+        return personalForm;
+    }
+  };
 
   const validateCurrentStep = async () => {
-    const currentStepSchema = steps[currentStep].schema;
-    const currentStepFields = Object.keys(
-      currentStepSchema.shape
-    ) as (keyof FormData)[];
-
-    const isValid = await trigger(currentStepFields);
+    const currentForm = getCurrentForm();
+    const isValid = await currentForm.trigger();
 
     if (isValid) {
       setCompletedSteps((prev) => new Set([...prev, currentStep]));
+      // Store current step data
+      const stepData = currentForm.getValues();
+      setFormData(prev => ({ ...prev, ...stepData }));
     }
 
     return isValid;
@@ -133,10 +158,10 @@ const Home = () => {
     }
   };
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async () => {
     const isValid = await validateCurrentStep();
     if (isValid) {
-      console.log("Form submitted:", data);
+      console.log("Form submitted:", formData);
       setIsSubmitted(true);
     }
   };
@@ -203,39 +228,39 @@ const Home = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Input
-            {...form.register("firstName")}
+            {...personalForm.register("firstName")}
             label="First name"
             type="text"
             placeholder="Enter your first name"
-            error={errors.firstName?.message}
+            error={personalForm.formState.errors.firstName?.message}
           />
         </div>
         <div>
           <Input
-            {...form.register("lastName")}
+            {...personalForm.register("lastName")}
             label="Last name"
             type="text"
             placeholder="Enter your last name"
-            error={errors.lastName?.message}
+            error={personalForm.formState.errors.lastName?.message}
           />
         </div>
       </div>
       <div>
         <Input
-          {...form.register("email")}
+          {...personalForm.register("email")}
           label="Email"
           type="email"
           placeholder="Enter your email address"
-          error={errors.email?.message}
+          error={personalForm.formState.errors.email?.message}
         />
       </div>
       <div>
         <Input
-          {...form.register("phone")}
+          {...personalForm.register("phone")}
           label="Phone number"
           type="tel"
           placeholder="Enter your phone number"
-          error={errors.phone?.message}
+          error={personalForm.formState.errors.phone?.message}
         />
       </div>
     </div>
@@ -248,40 +273,40 @@ const Home = () => {
       </h2>
       <div>
         <Input
-          {...form.register("street")}
+          {...addressForm.register("street")}
           label="Street Address"
           type="text"
           placeholder="Enter Street Address"
-          error={errors.street?.message}
+          error={addressForm.formState.errors.street?.message}
         />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Input
-            {...form.register("city")}
+            {...addressForm.register("city")}
             label="City"
             type="text"
             placeholder="Enter your city"
-            error={errors.city?.message}
+            error={addressForm.formState.errors.city?.message}
           />
         </div>
         <div>
           <Input
-            {...form.register("state")}
+            {...addressForm.register("state")}
             label="State"
             type="text"
             placeholder="Enter your state"
-            error={errors.state?.message}
+            error={addressForm.formState.errors.state?.message}
           />
         </div>
       </div>
       <div>
         <Input
-          {...form.register("zipCode")}
+          {...addressForm.register("zipCode")}
           label="ZIP Code"
           type="text"
           placeholder="Enter your ZIP code"
-          error={errors.zipCode?.message}
+          error={addressForm.formState.errors.zipCode?.message}
         />
       </div>
     </div>
@@ -294,43 +319,43 @@ const Home = () => {
       </h2>
       <div>
         <Input
-          {...form.register("cardNumber")}
+          {...paymentForm.register("cardNumber")}
           label="Card Number"
           type="text"
           placeholder="1234 5678 9012 3456"
           maxLength={16}
-          error={errors.cardNumber?.message}
+          error={paymentForm.formState.errors.cardNumber?.message}
         />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Input
-            {...form.register("expiryDate")}
+            {...paymentForm.register("expiryDate")}
             label="Expiry Date"
             type="text"
             placeholder="MM/YY"
             maxLength={5}
-            error={errors.expiryDate?.message}
+            error={paymentForm.formState.errors.expiryDate?.message}
           />
         </div>
         <div>
           <Input
-            {...form.register("cvv")}
+            {...paymentForm.register("cvv")}
             label="CVV"
             type="text"
             placeholder="123"
             maxLength={4}
-            error={errors.cvv?.message}
+            error={paymentForm.formState.errors.cvv?.message}
           />
         </div>
       </div>
       <div>
         <Input
-          {...form.register("cardholderName")}
+          {...paymentForm.register("cardholderName")}
           label="Cardholder Name"
           type="text"
           placeholder="Enter cardholder name"
-          error={errors.cardholderName?.message}
+          error={paymentForm.formState.errors.cardholderName?.message}
         />
       </div>
     </div>
@@ -352,7 +377,10 @@ const Home = () => {
           setIsSubmitted(false);
           setCurrentStep(0);
           setCompletedSteps(new Set());
-          form.reset();
+          setFormData({});
+          personalForm.reset();
+          addressForm.reset();
+          paymentForm.reset();
         }}
         className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200"
       >
@@ -383,7 +411,7 @@ const Home = () => {
       <div className="bg-white rounded-lg shadow-lg p-6">
         {renderStepIndicator()}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-6">
           {renderCurrentStep()}
           <div className="flex justify-between pt-6">
             <button
@@ -411,7 +439,8 @@ const Home = () => {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
+                onClick={onSubmit}
                 className="flex items-center px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200"
               >
                 Submit
@@ -419,7 +448,7 @@ const Home = () => {
               </button>
             )}
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
